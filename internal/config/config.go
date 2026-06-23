@@ -1,6 +1,7 @@
 package config
 
 import (
+	"blogaggregator/internal/database"
 	"encoding/json"
 	"errors"
 	"os"
@@ -16,6 +17,7 @@ type Config struct {
 
 type State struct {
 	Config *Config
+	DB     *database.Queries
 }
 
 func Read() (Config, error) {
