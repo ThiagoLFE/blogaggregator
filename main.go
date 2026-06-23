@@ -1,11 +1,20 @@
 package main
 
 import (
+	"blogaggregator/internal/config"
 	"fmt"
-	"os"
 )
 
 func main() {
-	fmt.Println(os.UserHomeDir())
+	// if err := config.SetUsername("sweetplum"); err != nil {
+	// 	panic("failed to set username: " + err.Error())
+	// }
+
+	data, err := config.Read()
+	if err != nil {
+		panic("fail to read the config data: " + err.Error())
+	}
+
+	fmt.Println(data)
 
 }

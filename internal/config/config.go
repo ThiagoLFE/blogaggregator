@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-const fileName = "gatorconfig.json"
+const fileName = ".gatorconfig.json"
 
 type Config struct {
 	DbUrl           string
@@ -21,6 +21,10 @@ func Read() (Config, error) {
 	}
 
 	file, err := os.Open(configFilePath)
+	if err != nil {
+		return Config{}, err
+	}
+	defer file.Close()
 
 	var config Config
 	if err := json.NewDecoder(file).Decode(&config); err != nil {
@@ -53,9 +57,9 @@ func SetUsername(username string) error {
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	configData, err := json.Marshal(config)
-	if err := json.NewEncoder(file).Encode(configData); err != nil {
+	if err := json.NewEncoder(file).Encode(config); err != nil {
 		return err
 	}
 
