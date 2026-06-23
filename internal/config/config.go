@@ -10,8 +10,12 @@ import (
 const fileName = ".gatorconfig.json"
 
 type Config struct {
-	DbUrl           string
-	CurrentUserName string
+	DbUrl           string `json:"db_url"`
+	CurrentUserName string `json:"current_user_name"`
+}
+
+type State struct {
+	Config *Config
 }
 
 func Read() (Config, error) {
@@ -34,36 +38,9 @@ func Read() (Config, error) {
 	return config, nil
 }
 
-func SetUsername(username string) error {
-	configFilePath, err := getPathFileConfig()
-	if err != nil {
-		return err
-	}
-
-	hasConfigFile := fileExists(configFilePath)
-	var config Config
-
-	if hasConfigFile {
-		if config, err = Read(); err != nil {
-			return err
-		}
-	} else {
-		config = Config{DbUrl: "https://exempleurl.com"}
-	}
-
-	config.CurrentUserName = username
-
-	file, err := os.OpenFile(configFilePath, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	if err := json.NewEncoder(file).Encode(config); err != nil {
-		return err
-	}
-
-	return nil
+func (cfg *Config) SetUser(username string) error {
+	cfg.CurrentUserName = username
+	return write(*cfg)
 }
 
 func fileExists(filename string) bool {
@@ -84,4 +61,23 @@ func getPathFileConfig() (string, error) {
 	}
 
 	return filepath.Join(homeDir, fileName), nil
+}
+
+func write(cfg Config) error {
+	configFilePath, err := getPathFileConfig()
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(configFilePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if err := json.NewEncoder(file).Encode(cfg); err != nil {
+		return err
+	}
+
+	return nil
 }
