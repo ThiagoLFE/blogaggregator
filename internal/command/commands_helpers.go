@@ -4,11 +4,14 @@ import (
 	"blogaggregator/internal/config"
 	"blogaggregator/internal/database"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 func HandlerLogin(s *config.State, cmd Command) error {
@@ -17,7 +20,16 @@ func HandlerLogin(s *config.State, cmd Command) error {
 	}
 	name := cmd.Args[0]
 
-	if err := s.Config.SetUser(name); err != nil {
+	user, err := s.DB.GetUser(context.Background(), name)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			fmt.Printf("The current user not exists, please register with cmd register <name> first\n")
+			os.Exit(1)
+		}
+		return err
+	}
+
+	if err := s.Config.SetUser(user.Name); err != nil {
 		return err
 	}
 
@@ -38,6 +50,13 @@ func HandlerRegistration(s *config.State, cmd Command) error {
 		CreatedAt: time.Now(),
 	})
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) {
+			if pqErr.Code == "23505" && pqErr.Constraint == "users_name_key" {
+				fmt.Printf("username %q already exists\n", name)
+				os.Exit(1)
+			}
+		}
 		return err
 	}
 
