@@ -76,3 +76,13 @@ func HandlerRegistration(s *config.State, cmd Command) error {
 
 	return nil
 }
+
+func Reset(s *config.State, cmd Command) error {
+	err := s.DB.DeleteUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to reset db state: %v", err)
+	}
+
+	fmt.Println("DB restored successfully")
+	return nil
+}
