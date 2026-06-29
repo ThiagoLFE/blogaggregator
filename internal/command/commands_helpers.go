@@ -86,3 +86,19 @@ func Reset(s *config.State, cmd Command) error {
 	fmt.Println("DB restored successfully")
 	return nil
 }
+
+func GetUsers(s *config.State, cmd Command) error {
+	users, err := s.DB.ListUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to read users: %v", err)
+	}
+
+	for _, u := range users {
+		if u.Name == s.Config.CurrentUserName {
+			fmt.Printf("* %s (current)\n", u.Name)
+			continue
+		}
+		fmt.Printf("* %s\n", u.Name)
+	}
+	return nil
+}
