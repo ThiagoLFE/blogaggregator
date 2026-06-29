@@ -77,7 +77,7 @@ func HandlerRegistration(s *config.State, cmd Command) error {
 	return nil
 }
 
-func Reset(s *config.State, cmd Command) error {
+func HandlerReset(s *config.State, cmd Command) error {
 	err := s.DB.DeleteUsers(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to reset db state: %v", err)
@@ -87,7 +87,7 @@ func Reset(s *config.State, cmd Command) error {
 	return nil
 }
 
-func GetUsers(s *config.State, cmd Command) error {
+func HandlerGetUsers(s *config.State, _ Command) error {
 	users, err := s.DB.ListUsers(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to read users: %v", err)
@@ -99,6 +99,29 @@ func GetUsers(s *config.State, cmd Command) error {
 			continue
 		}
 		fmt.Printf("* %s\n", u.Name)
+	}
+	return nil
+}
+
+func HandlerAgg(s *config.State, _ Command) error {
+	rssFeed, err := fetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println()
+	fmt.Println("RSS FEED")
+	fmt.Printf("%s\n", rssFeed.Channel.Description)
+	fmt.Printf("%s\n", rssFeed.Channel.Link)
+	fmt.Printf("%s\n", rssFeed.Channel.Title)
+
+	fmt.Println()
+	fmt.Println("Items:")
+	for i, _ := range rssFeed.Channel.Item {
+		fmt.Printf("%s\n", rssFeed.Channel.Item[i].Description)
+		fmt.Printf("%s\n", rssFeed.Channel.Item[i].Title)
+		fmt.Printf("%s\n", rssFeed.Channel.Item[i].Link)
+		fmt.Printf("%s\n", rssFeed.Channel.Item[i].PubDate)
 	}
 	return nil
 }
