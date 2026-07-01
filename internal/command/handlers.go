@@ -49,6 +49,7 @@ func HandlerRegistration(s *config.State, cmd Command) error {
 		UpdatedAt: time.Now(),
 		CreatedAt: time.Now(),
 	})
+
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) {
@@ -80,7 +81,12 @@ func HandlerRegistration(s *config.State, cmd Command) error {
 func HandlerReset(s *config.State, cmd Command) error {
 	err := s.DB.DeleteUsers(context.Background())
 	if err != nil {
-		return fmt.Errorf("failed to reset db state: %v", err)
+		return fmt.Errorf("failed to reset users db state: %v", err)
+	}
+
+	err = s.DB.DeleteFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to reset feeds db state: %v", err)
 	}
 
 	fmt.Println("DB restored successfully")
@@ -109,19 +115,79 @@ func HandlerAgg(s *config.State, _ Command) error {
 		return err
 	}
 
+	printFeed(rssFeed)
+	return nil
+}
+
+func printFeed(feed *RSSFeed) {
 	fmt.Println()
 	fmt.Println("RSS FEED")
-	fmt.Printf("%s\n", rssFeed.Channel.Description)
-	fmt.Printf("%s\n", rssFeed.Channel.Link)
-	fmt.Printf("%s\n", rssFeed.Channel.Title)
+	fmt.Printf("%s\n", feed.Channel.Description)
+	fmt.Printf("%s\n", feed.Channel.Link)
+	fmt.Printf("%s\n", feed.Channel.Title)
 
 	fmt.Println()
 	fmt.Println("Items:")
-	for i, _ := range rssFeed.Channel.Item {
-		fmt.Printf("%s\n", rssFeed.Channel.Item[i].Description)
-		fmt.Printf("%s\n", rssFeed.Channel.Item[i].Title)
-		fmt.Printf("%s\n", rssFeed.Channel.Item[i].Link)
-		fmt.Printf("%s\n", rssFeed.Channel.Item[i].PubDate)
+	for i, _ := range feed.Channel.Item {
+		fmt.Printf("%s\n", feed.Channel.Item[i].Description)
+		fmt.Printf("%s\n", feed.Channel.Item[i].Title)
+		fmt.Printf("%s\n", feed.Channel.Item[i].Link)
+		fmt.Printf("%s\n", feed.Channel.Item[i].PubDate)
 	}
+}
+
+func HandlerAddFeed(s *config.State, c Command) error {
+	if len(c.Args) != 2 {
+		return fmt.Errorf("Error. Usage go run . addfeed <title> <url>")
+	}
+
+	u, err := s.DB.GetUser(context.Background(), s.Config.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("error to found user: %q", err)
+	}
+
+	cmd := database.CreateFeedParams{
+		ID:        uuid.New(),
+		Name:      c.Args[0],
+		Url:       c.Args[1],
+		UserID:    u.ID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	feed, err := s.DB.CreateFeed(context.Background(), cmd)
+	if err != nil {
+		var pqError *pq.Error
+		if errors.As(err, &pqError) {
+			if pqError.Constraint == "uq_feeds_user_name" {
+				return fmt.Errorf("this feed with same name and url already have been posted from you")
+			}
+		}
+		return fmt.Errorf("fail to create feed: %q", err)
+	}
+
+	printFeedObjt(s, feed)
+
 	return nil
+}
+
+func printFeedObjt(s *config.State, feed database.Feed) {
+	author_name := fmt.Sprintf("%v", feed.UserID)
+	u, err := s.DB.GetUserByID(context.Background(), feed.UserID)
+	if err == nil {
+		author_name = u.Name
+	}
+
+	fmt.Println("")
+	fmt.Println("Feed")
+	fmt.Println("")
+
+	fmt.Printf("ID: %v\n", feed.ID)
+	fmt.Printf("Name: %v\n", feed.Name)
+	fmt.Printf("URL: %v\n", feed.Url)
+	fmt.Printf("Author: %v\n", author_name)
+	fmt.Printf("Created at: %v\n", feed.CreatedAt.Format("02/01/2006 15:04:05"))
+	fmt.Printf("Updated at: %v\n", feed.UpdatedAt.Format("02/01/2006 15:04:05"))
+
+	fmt.Println("")
 }
